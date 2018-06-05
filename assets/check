@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -e
+
+exec 3>&1 # make stdout available as fd 3 for the result
+exec 1>&2 # redirect all output to stderr for logging
+
+# for jq
+PATH=/usr/local/bin:$PATH
+
+payload=$TMPDIR/ibm-container-resource
+cat > $payload <&0
+previous_version=$(jq -r '.version.number // ""' < $payload)
+environment$(jq -r '.source.environment // ""' < $payload)
+if [ -n "${environment}" ]
+then
+    environment=${environment}.
+fi
+
+ARMADA_VERSION_JSON=`curl https://containers.${environment}bluemix.net/v1/kube-versions`
+NUM=`echo $ARMADA_VERSION_JSON | jq ".| length"``
+VERSION=0.0.0
+
+for ((i=0; i<${NUM}; i++))
+do
+    default=`$ARMADA_VERSION_JSON | jq ".[${i}].default`
+    if [ "${default}" == "true" ]
+    then
+        VERSION=`$ARMADA_VERSION_JSON | jq ".[${i}].major`.`$ARMADA_VERSION_JSON | jq ".[${i}].minor`.`$ARMADA_VERSION_JSON | jq ".[${i}].patch`
+        break 1
+    fi
+done
+
+echo ${VERSION} | jq -R '.' | jq -s "map({number: .})" >&3
