@@ -11,22 +11,22 @@ PATH=/usr/local/bin:$PATH
 payload=$TMPDIR/ibm-container-resource
 cat > $payload <&0
 previous_version=$(jq -r '.version.number // ""' < $payload)
-environment$(jq -r '.source.environment // ""' < $payload)
+environment=$(jq -r '.source.environment // ""' < $payload)
 if [ -n "${environment}" ]
 then
     environment=${environment}.
 fi
 
 ARMADA_VERSION_JSON=`curl https://containers.${environment}bluemix.net/v1/kube-versions`
-NUM=`echo $ARMADA_VERSION_JSON | jq ".| length"``
+NUM=`echo $ARMADA_VERSION_JSON | jq ".| length"`
 VERSION=0.0.0
 
 for ((i=0; i<${NUM}; i++))
 do
-    default=`$ARMADA_VERSION_JSON | jq ".[${i}].default`
+    default=`echo $ARMADA_VERSION_JSON | jq ".[${i}].default"`
     if [ "${default}" == "true" ]
     then
-        VERSION=`$ARMADA_VERSION_JSON | jq ".[${i}].major`.`$ARMADA_VERSION_JSON | jq ".[${i}].minor`.`$ARMADA_VERSION_JSON | jq ".[${i}].patch`
+        VERSION=`echo $ARMADA_VERSION_JSON | jq ".[${i}].major"`.`echo $ARMADA_VERSION_JSON | jq ".[${i}].minor"`.`echo $ARMADA_VERSION_JSON | jq ".[${i}].patch"`
         break 1
     fi
 done
