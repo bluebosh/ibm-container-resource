@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -e -x
 
 exec 3>&1 # make stdout available as fd 3 for the result
 exec 1>&2 # redirect all output to stderr for logging
@@ -10,20 +10,34 @@ PATH=/usr/local/bin:$PATH
 
 payload=$TMPDIR/ibm-container-resource
 cat > $payload <&0
-previous_version=$(jq -r '.version.number // ""' < $payload)
+initial_version=$(jq -r '.source.version // ""' < $payload)
 environment=$(jq -r '.source.environment // ""' < $payload)
-if [ -n "${environment}" ]
+type=$(jq -r '.source.type // "default"' < $payload)
+if [ -n "${environment}" ] || [[ "${environment}" == "ng" ]]
 then
     environment=${environment}.
 fi
 
 ARMADA_VERSION_JSON=$(curl https://containers."${environment}"bluemix.net/v1/kube-versions)
 
-VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+if [[ "${type}" == "latest" ]]
+then
+    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[-1] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+elif [[ "${type}" == "oldest" ]]
+then
+    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[0] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+else
+    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+fi
+
+if $(dpkg --compare-versions "${VERSION}" "le" "${initial_version}")
+then
+    VERSION=""
+fi
 
 if [ -z "${VERSION}" ]
 then
-    VERSION=0.0.0
+    echo "[]" >&3
+else
+    echo ${VERSION} | jq -R '.' | jq -s "map({number: .})" >&3
 fi
-
-echo ${VERSION} | jq -R '.' | jq -s "map({number: .})" >&3
