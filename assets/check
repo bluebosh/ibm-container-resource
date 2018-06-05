@@ -17,18 +17,13 @@ then
     environment=${environment}.
 fi
 
-ARMADA_VERSION_JSON=`curl https://containers.${environment}bluemix.net/v1/kube-versions`
-NUM=`echo $ARMADA_VERSION_JSON | jq ".| length"`
-VERSION=0.0.0
+ARMADA_VERSION_JSON=$(curl https://containers."${environment}"bluemix.net/v1/kube-versions)
 
-for ((i=0; i<${NUM}; i++))
-do
-    default=`echo $ARMADA_VERSION_JSON | jq ".[${i}].default"`
-    if [ "${default}" == "true" ]
-    then
-        VERSION=`echo $ARMADA_VERSION_JSON | jq ".[${i}].major"`.`echo $ARMADA_VERSION_JSON | jq ".[${i}].minor"`.`echo $ARMADA_VERSION_JSON | jq ".[${i}].patch"`
-        break 1
-    fi
-done
+VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+
+if [ -z "${VERSION}" ]
+then
+    VERSION=0.0.0
+fi
 
 echo ${VERSION} | jq -R '.' | jq -s "map({number: .})" >&3
