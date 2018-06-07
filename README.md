@@ -3,6 +3,8 @@ A concourse resource for managing [IBM Container Service](https://console.bluemi
 
 ## Source Configuration
 
+* `uri`: *Optional.* The IBM Container Service versions URI. If not specified, the resource will use `https://containers.bluemix.net/v1/kube-versions`. If specified, it overwrites `environment` setting.
+
 * `environment`: *Optional.* The environment of IBM Container Service. If not specified, the resource will check version of production environment.
 
 * `type`: *Optional. Default `default`.* If not specified, the resource will check default version.

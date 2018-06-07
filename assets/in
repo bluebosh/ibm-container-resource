@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e -x
+set -e
 
 exec 3>&1 # make stdout available as fd 3 for the result
 exec 1>&2 # redirect all output to stderr for logging
@@ -12,32 +12,10 @@ mkdir -p "${destination}"
 PATH=/usr/local/bin:$PATH
 
 payload=$TMPDIR/ibm-container-resource
-cat > $payload <&0
-environment=$(jq -r '.source.environment // ""' < $payload)
-type=$(jq -r '.source.type // "default"' < $payload)
-if [ -n "${environment}" ]
-then
-    environment=${environment}.
-fi
+cat > "$payload" <&0
+VERSION=$(jq -r '.version.number // ""' < "$payload")
 
-ARMADA_VERSION_JSON=$(curl https://containers."${environment}"bluemix.net/v1/kube-versions)
-
-if [[ "${type}" == "latest" ]]
-then
-    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[-1] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
-elif [[ "${type}" == "oldest" ]]
-then
-    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[0] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
-else
-    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
-fi
-
-if [ -z "${VERSION}" ]
-then
-    VERSION=0.0.0
-fi
-
-echo ${VERSION} > ${destination}/number
+echo ${VERSION} > "${destination}"/number
 
 jq -n "{
   version: {number: $(echo ${VERSION} | jq -R .)},
