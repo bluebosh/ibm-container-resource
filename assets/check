@@ -12,23 +12,35 @@ payload=$TMPDIR/ibm-container-resource
 cat > "$payload" <&0
 initial_version=$(jq -r '.source.version // ""' < "$payload")
 environment=$(jq -r '.source.environment // ""' < "$payload")
+echo "[INFO] ${environment}"
 type=$(jq -r '.source.type // "default"' < "$payload")
-if [ -n "${environment}" ] || [[ "${environment}" == "ng" ]]
-then
-    environment=${environment}.
+if [ -n "${environment}" ]; then
+    if [[ "${environment}" == "test" ]] || [[ "${environment}" == "dev" ]]; then
+        environment=${environment}.
+    elif [[ "${environment}" == "prod" ]]; then
+        environment=""
+    else
+        echo "[ERROR] Unknown ${environment}, please check"
+        exit 1
+    fi
+else
+    environment=""
 fi
-request_uri=$(jq -r '.source.uri // "https://containers.'${environment}'bluemix.net/v1/kube-versions"' < "$payload")
+request_uri=$(jq -r '.source.uri // "https://containers.'${environment}'cloud.ibm.com/v1/kube-versions"' < "$payload")
 
 ARMADA_VERSION_JSON=$(curl "$request_uri")
 
-if [[ "${type}" == "latest" ]]
-then
+if [[ "${type}" == "latest" ]]; then
     VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[-1] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
-elif [[ "${type}" == "oldest" ]]
-then
+elif [[ "${type}" == "oldest_stable" ]]; then
     VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[0] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+elif [[ "${type}" == "default_stable" ]]; then
+    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[1] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+elif [[ "${type}" == "stable" ]]; then
+    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[2] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
 else
-    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+    echo "[ERROR] This ${type} not exists, please check"
+    exit 1
 fi
 
 if dpkg --compare-versions "${VERSION}" "le" "${initial_version}"
