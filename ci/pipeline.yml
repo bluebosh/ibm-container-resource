@@ -9,7 +9,7 @@ resources:
 - name: ibm-container-stage
   type: ibm-container-1
   source:
-    environment: stage1
+    environment: prod
     type: latest
     version: 1.9.1
 
