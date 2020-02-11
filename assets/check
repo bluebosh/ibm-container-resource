@@ -32,14 +32,10 @@ ARMADA_VERSION_JSON=$(curl "$request_uri")
 
 if [[ "${type}" == "latest" ]]; then
     VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[-1] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
-elif [[ "${type}" == "oldest_stable" ]]; then
-    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[0] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
 elif [[ "${type}" == "default_stable" ]]; then
-    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[1] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
-elif [[ "${type}" == "stable" ]]; then
-    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[2] | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
+    VERSION=$(echo "$ARMADA_VERSION_JSON" | jq -r '.[] | select(.default == true ) | (.major|tostring) + "." + (.minor|tostring) + "." + (.patch|tostring)')
 else
-    echo "[ERROR] This ${type} not exists, please check"
+    echo "[ERROR] This ${type} is invalid, please check"
     exit 1
 fi
 
